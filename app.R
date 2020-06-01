@@ -77,7 +77,8 @@ ui <- fluidPage(
                            min ="2018-01-01",
                            max = "2019-12-31",
                            separator = " kuni "),
-            
+            fluidRow(div(style="float: left;", actionButton("previousMonth",textOutput("toMonthBack"))),
+                     div(style="float: right;", actionButton("nextMonth", textOutput("toMonthForward")))),
             checkboxInput("exactDates", "Kuupäeva täpsusega", value = T),
             helpText("Valides kuupäeva täpsusega andemed filtreeritakse välja need read
                      millel puudub püügi algus ja lõppaeg. Pikkade perjoodie summasid
@@ -119,9 +120,9 @@ ui <- fluidPage(
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
     ranges <- reactiveValues(x = NULL, y = NULL)
-    
+    dates <- reactiveValues(data = NULL)
     baseMap <- reactive({
         estonia <- make_base_map(map_data$pyygiruudud_3301,
                                  map_data$estonia_map,
@@ -308,6 +309,55 @@ server <- function(input, output) {
             return("NB! püügivahendite arvu andmed on vaid 2018 aasta kohta!")
         }
         })
+    
+    ##############-----Month change buttons ----------#############
+    newDates <- function(amount, dates){
+      dates[1] <- lubridate::add_with_rollback(dates[1], months(amount), roll_to_first = T)
+      lubridate::day(dates[1]) <- 1
+      dates[2] <- lubridate::add_with_rollback(dates[2], months(amount))
+      lubridate::day(dates[2]) <- lubridate::days_in_month(dates[2])
+      return(dates)
+    }
+    
+    
+    monthDisplay <- function(amount, input){
+      dates <- newDates(amount, input$dates)
+      start <- lubridate::month(dates[1], label = T, locale = "et_EE.utf8")
+      end <- lubridate::month(dates[2], label = T, locale = "et_EE.utf8")
+      if(amount>0){
+        if(start == end) return(paste0(start, " >"))
+        return(paste0(start, " - ",end, " >"))
+        }
+      if(amount<0){
+        if(start == end) return(paste0("< ", start))
+        return(paste0("< ", start, " - ",end))
+        }
+      return("0")
+    }
+    
+    
+    pMonthDisplay <- reactive({
+     return(monthDisplay(-1, input))
+    })
+    
+    nMonthDisplay <- reactive({
+      return(monthDisplay(1, input))
+    })
+    
+    
+    output$toMonthBack <- renderText({ pMonthDisplay()  })
+    output$toMonthForward <- renderText({ nMonthDisplay()  })
+    
+    observeEvent(input$previousMonth, {
+      dates <- newDates(-1, input$dates)
+      updateDateRangeInput(session, "dates", start = dates[1], end = dates[2] )
+    })
+    
+    observeEvent(input$nextMonth, {
+      dates <- newDates(1, input$dates)
+      updateDateRangeInput(session, "dates", start = dates[1], end = dates[2] )
+    })  
+    
     
     # When a double-click happens, check if there's a brush on the plot.
     # If so, zoom to the brush bounds; if not, reset the zoom.
