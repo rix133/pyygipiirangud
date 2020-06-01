@@ -322,8 +322,8 @@ server <- function(input, output, session) {
     
     monthDisplay <- function(amount, input){
       dates <- newDates(amount, input$dates)
-      start <- lubridate::month(dates[1], label = T, locale = "et_EE.utf8")
-      end <- lubridate::month(dates[2], label = T, locale = "et_EE.utf8")
+      start <- lubridate::month(dates[1], label = T)
+      end <- lubridate::month(dates[2], label = T)
       if(amount>0){
         if(start == end) return(paste0(start, " >"))
         return(paste0(start, " - ",end, " >"))
